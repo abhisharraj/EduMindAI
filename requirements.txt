@@ -1,0 +1,10 @@
+streamlit
+ollama
+numpy
+faiss-cpu
+sentence-transformers
+langchain-text-splitters
+PyMuPDF
+torch
+transformers
+scikit-learn
