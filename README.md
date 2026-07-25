@@ -15,18 +15,29 @@ EduMindAI is an Offline Hinglish Study Assistant built using Llama 3.2, Retrieva
 - Python
 - Streamlit
 - Ollama
-- Llama 3.2 1B
+- Llama 3.2 (1B)
 - Sentence Transformers
 - FAISS
 - PyMuPDF
 
-## Run
+## Installation
 
 ```bash
 pip install -r requirements.txt
+```
+
+Install the Ollama model:
+
+```bash
+ollama pull llama3.2:1b
+```
+
+Run the application:
+
+```bash
 streamlit run app.py
 ```
 
 ## Author
 
-Team:code_crafters
+Team: code_crafters
