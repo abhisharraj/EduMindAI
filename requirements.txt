@@ -4,7 +4,7 @@ numpy
 faiss-cpu
 sentence-transformers
 langchain-text-splitters
-Pypdf
+PyMuPDF
 torch
 transformers
 scikit-learn
