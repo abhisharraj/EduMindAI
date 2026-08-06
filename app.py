@@ -1,23 +1,9 @@
-import ollama
-import numpy as np
-import streamlit as st
 import tempfile
-from utils import process_pdf
+import requests
+import streamlit as st
 
 from sentence_transformers import SentenceTransformer
-
-@st.cache_resource
-def load_embedder():
-    return SentenceTransformer("all-MiniLM-L6-v2")
-
-embedder = load_embedder()
-
-# ----------------------------
-# Chat History
-# ----------------------------
-
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+from utils import process_pdf
 
 
 # ----------------------------
@@ -27,15 +13,31 @@ st.set_page_config(
     page_title="EduMindAI",
     page_icon="📚",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
+
+# ----------------------------
+# EMBEDDING MODEL
+# ----------------------------
+@st.cache_resource
+def load_embedder():
+    return SentenceTransformer("all-MiniLM-L6-v2")
+
+
+embedder = load_embedder()
+
+# ----------------------------
+# CHAT HISTORY
+# ----------------------------
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
 # ----------------------------
 # CUSTOM CSS
 # ----------------------------
-st.markdown("""
+st.markdown(
+    """
 <style>
-
 #MainMenu {visibility:hidden;}
 footer {visibility:hidden;}
 header {visibility:hidden;}
@@ -56,20 +58,6 @@ header {visibility:hidden;}
     color:#666666;
     font-size:20px;
     margin-bottom:30px;
-}
-
-.info-card{
-    background:white;
-    padding:18px;
-    border-radius:15px;
-    box-shadow:0px 4px 12px rgba(0,0,0,.08);
-}
-
-.chat-box{
-    background:white;
-    padding:20px;
-    border-radius:15px;
-    box-shadow:0px 4px 10px rgba(0,0,0,.08);
 }
 
 .stButton>button{
@@ -95,72 +83,69 @@ header {visibility:hidden;}
     color:#222;
     box-shadow:0 2px 8px rgba(0,0,0,.08);
 }
-
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 # ----------------------------
 # SIDEBAR
 # ----------------------------
 with st.sidebar:
-
     st.title("📚 EduMindAI")
-
     st.success("Offline AI Assistant")
 
     st.markdown("---")
-
     st.subheader("Features")
-
-    st.markdown("""
-- 🤖 Llama 3.1 (Offline)
+    st.markdown(
+        """
+- 🤖 Llama 3.1 (Offline API)
 - 📄 PDF Question Answering
 - 🔍 FAISS Semantic Search
 - 🧠 RAG Architecture
 - 🇮🇳 Hinglish Answers
-    """)
+"""
+    )
 
     st.markdown("---")
-
     st.info("Made by team MMMUT")
+
+    if st.button("🗑 Clear Chat"):
+        st.session_state.messages = []
+        st.rerun()
 
 # ----------------------------
 # HEADER
 # ----------------------------
 st.markdown(
     "<div class='main-title'>📚 EduMindAI</div>",
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
 
 st.markdown(
     "<div class='sub-title'>Offline Hinglish Study Assistant using Llama 3.1 + RAG</div>",
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
 
 # ----------------------------
 # LAYOUT
 # ----------------------------
-
-
-left, right = st.columns([1,2])
+left, right = st.columns([1, 2])
 
 with left:
-
     st.markdown("### 📄 Upload PDF")
 
     uploaded_pdf = st.file_uploader(
         "Choose your study notes",
-        type=["pdf"]
+        type=["pdf"],
     )
 
     if uploaded_pdf:
-
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
             tmp.write(uploaded_pdf.read())
             pdf_path = tmp.name
 
         with st.spinner("📖 Processing PDF..."):
-
             data = process_pdf(pdf_path)
 
             st.session_state["index"] = data["index"]
@@ -178,41 +163,42 @@ with left:
         st.metric("📑 Pages", st.session_state["pages"])
         st.metric("📚 Chunks", st.session_state["chunk_count"])
         st.metric("🤖 Model", "Llama 3.2 : 1B")
-
     else:
         st.info("Upload a PDF to begin.")
-    
-    if st.button("🗑 Clear Chat"):
-        st.session_state.messages = []
-        st.rerun()
 
 with right:
-
     st.markdown("### 💬 Chat with EduMindAI")
 
-    # Display previous conversation
     for message in st.session_state.messages:
-
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    question = st.chat_input(
-        "Ask anything from your uploaded PDF..."
-    )
+    question = st.chat_input("Ask anything from your uploaded PDF...")
 
-    ask = question is not None
+
+# ----------------------------
+# REST API HELPER
+# ----------------------------
+def ask_llama(prompt: str) -> str:
+    API_URL = "http://172.17.0.1:11434/api/generate"
+
+    payload = {
+        "model": "llama3.2:1b",
+        "prompt": prompt,
+        "stream": False,
+    }
+
+    response = requests.post(API_URL, json=payload, timeout=300)
+    response.raise_for_status()
+
+    data = response.json()
+    return data.get("response", "").strip()
+
 
 # ----------------------------
 # QUESTION ANSWERING
 # ----------------------------
-
-if ask:
-
-    if len(st.session_state.messages) == 0:
-        st.info(
-            "👋 Welcome to EduMindAI! Upload a PDF and ask questions in natural language."
-        )
-
+if question:
     if "index" not in st.session_state:
         st.warning("⚠️ Please upload a PDF first.")
         st.stop()
@@ -224,24 +210,22 @@ if ask:
     st.session_state.messages.append(
         {
             "role": "user",
-            "content": question
+            "content": question,
         }
     )
 
     with st.spinner("🔍 Searching your notes..."):
-
         index = st.session_state["index"]
         chunks = st.session_state["chunks"]
 
         query_embedding = embedder.encode(
             [question],
-            convert_to_numpy=True
+            convert_to_numpy=True,
         ).astype("float32")
 
-        D, I = index.search(query_embedding, k=3)
+        _, I = index.search(query_embedding, k=3)
 
         context = ""
-
         for idx in I[0]:
             context += chunks[idx] + "\n\n"
 
@@ -251,7 +235,6 @@ You are EduMindAI.
 Answer ONLY using the PDF context below.
 
 Rules:
-
 - Answer in simple Hinglish.
 - Keep technical words in English.
 - Explain like a teacher.
@@ -273,72 +256,47 @@ Answer:
 """
 
     with st.spinner("🤖 Generating Answer..."):
+        try:
+            answer = ask_llama(prompt)
+        except requests.exceptions.RequestException as e:
+            st.error(f"Failed to connect to Llama API: {e}")
+            st.stop()
+        except Exception as e:
+            st.error(f"Unexpected error: {e}")
+            st.stop()
 
-        with st.chat_message("assistant"):
-
-            message_placeholder = st.empty()
-
-            full_response = ""
-
-            stream = ollama.chat(
-                model="llama3.2:1b",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                stream=True
-            )
-
-            for chunk in stream:
-
-                if "message" in chunk:
-
-                    full_response += chunk["message"]["content"]
-
-                    message_placeholder.markdown(full_response + "▌")
-
-            message_placeholder.markdown(full_response)
-
-        answer = full_response
-
-    # NOW store the answer
     st.session_state.messages.append(
         {
             "role": "assistant",
-            "content": answer
+            "content": answer,
         }
     )
 
     with st.chat_message("assistant"):
-
-        st.markdown(f"""
-        <div class="answer-card">
-            <h4>📖 EduMindAI Answer</h4>
-            {answer}
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            f"""
+            <div class="answer-card">
+                <h4>📖 EduMindAI Answer</h4>
+                {answer}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     with st.expander("📚 Retrieved Chunks"):
-
         for i, idx in enumerate(I[0]):
-
-            st.markdown(f"### Chunk {i+1}")
-
+            st.markdown(f"### Chunk {i + 1}")
             st.info(chunks[idx])
-
             st.divider()
 
 st.markdown("---")
-
 st.markdown(
     """
 <div style='text-align:center;color:gray;padding:10px'>
 <b>EduMindAI</b><br>
 Offline AI Study Assistant<br>
-Powered by Llama 3.2 • FAISS • Sentence Transformers • Streamlit
+Powered by Llama 3.1 • FAISS • Sentence Transformers • Streamlit
 </div>
 """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
