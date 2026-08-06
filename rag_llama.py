@@ -1,8 +1,8 @@
 from pypdf import PdfReader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer
-from ollama import chat
 
+import requests
 import faiss
 import numpy as np
 
@@ -126,18 +126,20 @@ Answer:
 
 
 # ======================
-# STEP 9: Ask Llama
+# STEP 9: Ask Llama via REST API
 # ======================
 
-response = chat(
-    model="llama3.2:1b",
-    messages=[
-        {
-            "role": "user",
-            "content": prompt
-        }
-    ]
-)
+API_URL = "http://172.17.0.1:11434/api/generate"
+
+payload = {
+    "model": "llama3.2:1b",
+    "prompt": prompt,
+    "stream": False
+}
+
+response = requests.post(API_URL, json=payload)
+
+answer = response.json()["response"]
 
 
 # ======================
@@ -145,5 +147,4 @@ response = chat(
 # ======================
 
 print("\nAnswer:\n")
-
-print(response["message"]["content"])
+print(answer)
