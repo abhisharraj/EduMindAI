@@ -86,8 +86,6 @@ for idx in indices[0]:
 # STEP 7: Get Best Context
 # ======================
 
-context = chunks[indices[0][0]]
-
 print("\nRetrieved Context:\n")
 
 print(context)
@@ -134,12 +132,24 @@ API_URL = "http://172.17.0.1:11434/api/generate"
 payload = {
     "model": "llama3.2:1b",
     "prompt": prompt,
-    "stream": False
+    "stream": False,
+    "options": {
+        "num_ctx": 1024,
+        "num_gpu": 1,
+        "use_mmap": True
+    }
 }
 
-response = requests.post(API_URL, json=payload)
+try:
+    response = requests.post(API_URL, json=payload)
 
-answer = response.json()["response"]
+    if response.status_code == 200:
+        answer = response.json()["response"]
+    else:
+        answer = f"Error {response.status_code}: {response.text}"
+
+except requests.exceptions.RequestException as e:
+    answer = f"Connection Error: {e}"
 
 
 # ======================
