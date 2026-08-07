@@ -180,12 +180,17 @@ with right:
 # REST API HELPER
 # ----------------------------
 def ask_llama(prompt: str) -> str:
-    API_URL = "http://127.0.0.1:11434/api/generate"
+    API_URL = "http://172.17.0.1:11434/api/generate"
 
     payload = {
         "model": "llama3.2:1b",
         "prompt": prompt,
         "stream": False,
+        "options": {
+            "num_ctx": 1024,
+            "num_gpu": 1,
+            "use_mmap": True
+        }
     }
 
     response = requests.post(API_URL, json=payload, timeout=300)

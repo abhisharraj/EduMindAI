@@ -1,10 +1,31 @@
+# Virtual Environment
 venv/
+.venv/
+
+# Python Cache
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
+# Environment Variables
 .env
 
+# IDE
 .vscode/
 .idea/
 
+# Streamlit
+.streamlit/
+
+# OS Files
 .DS_Store
+Thumbs.db
+
+# Uploaded PDFs
+uploads/
+
+# FAISS Index (if generated)
+*.faiss
+*.index
+chunks.pkl

@@ -1,10 +1,7 @@
 streamlit
-ollama
+requests
 numpy
-faiss-cpu
-sentence-transformers
-langchain-text-splitters
-PyMuPDF
-torch
-transformers
-scikit-learn
+faiss
+fitz (PyMuPDF)
+SentenceTransformer
+RecursiveCharacterTextSplitter
