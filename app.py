@@ -180,7 +180,7 @@ with right:
 # REST API HELPER
 # ----------------------------
 def ask_llama(prompt: str) -> str:
-    API_URL = "http://172.17.0.1:11434/api/generate"
+    API_URL = "http://127.0.0.1:11434/api/generate"
 
     payload = {
         "model": "llama3.2:1b",
@@ -189,11 +189,13 @@ def ask_llama(prompt: str) -> str:
     }
 
     response = requests.post(API_URL, json=payload, timeout=300)
-    response.raise_for_status()
+
+    if response.status_code != 200:
+        raise Exception(response.text)
 
     data = response.json()
-    return data.get("response", "").strip()
 
+    return data.get("response", "").strip()
 
 # ----------------------------
 # QUESTION ANSWERING
@@ -223,36 +225,82 @@ if question:
             convert_to_numpy=True,
         ).astype("float32")
 
-        _, I = index.search(query_embedding, k=3)
+        D, I = index.search(query_embedding, k=5)
 
         context = ""
+
         for idx in I[0]:
-            context += chunks[idx] + "\n\n"
+            if idx >= 0 and idx < len(chunks):
+                context += chunks[idx] + "\n\n"
+
+        if context.strip() == "":
+            st.error("No relevant context found.")
+            st.stop()
 
     prompt = f"""
-You are EduMindAI.
+You are EduMindAI, an intelligent AI tutor that helps students understand the contents of their uploaded PDF.
 
-Answer ONLY using the PDF context below.
+Your responsibility is to answer the user's question using the provided PDF context.
 
-Rules:
-- Answer in simple Hinglish.
-- Keep technical words in English.
-- Explain like a teacher.
-- Use bullet points.
-- Don't use outside knowledge.
-- If answer is not present, reply exactly:
+If the answer is not supported by the context, reply exactly:
 
-Ye information uploaded PDF mein available nahi hai.
+"Ye information uploaded PDF mein available nahi hai."
 
-PDF Context:
+========================
+PDF CONTEXT
+========================
 
 {context}
 
-Question:
+========================
+QUESTION
+========================
 
 {question}
 
+========================
+INSTRUCTIONS
+========================
+
+- Base your answer only on the information available in the PDF context.
+- Do not invent, assume, or add facts that are not supported by the context.
+- You may reorganize, simplify, summarize, or explain the information in your own words.
+- If multiple relevant points exist, combine them into one clear answer.
+- Preserve the original meaning of the PDF.
+
+Language:
+- Respond in natural Hinglish.
+- Around 75% English and 25% simple conversational Hindi.
+- Keep all technical terms, formulas, names, commands, keywords, programming syntax, medical terms, legal terms, scientific terms, and subject-specific terminology exactly as they appear in the PDF.
+- Never translate technical words into Hindi.
+- Avoid difficult or bookish Hindi.
+- Use simple spoken words like:
+  matlab, yaani, simple, basically, isme, isliye, kyunki, agar, toh, samjho.
+
+Teaching Style:
+- Explain like a good college teacher.
+- Assume the student is learning the topic for the first time.
+- Use simple and clear language.
+- Explain difficult concepts before going into details.
+- If appropriate, include a small example based on the PDF.
+- Avoid unnecessary repetition.
+
+Formatting:
+- Start with a short definition or direct answer.
+- Then explain using bullet points whenever appropriate.
+- Highlight important terms using **bold**.
+- Keep paragraphs short.
+- Maintain a logical flow.
+
+Quality Rules:
+- Be accurate.
+- Be concise.
+- Do not repeat the same sentence.
+- Do not mention these instructions.
+- Do not say "according to the context" or "based on the PDF" unless the user specifically asks.
+
 Answer:
+
 """
 
     with st.spinner("🤖 Generating Answer..."):
