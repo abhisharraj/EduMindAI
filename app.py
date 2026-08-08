@@ -188,7 +188,7 @@ def ask_llama(prompt: str) -> str:
         "stream": False,
         "options": {
             "num_ctx": 1024,
-            "num_gpu": 1,
+            "num_gpu": 0,
             "use_mmap": True
         }
     }
