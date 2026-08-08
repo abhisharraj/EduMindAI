@@ -5,7 +5,7 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+embedding_model = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
 
 
 def process_pdf(pdf_path):
